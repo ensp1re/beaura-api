@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import {
     Body,
     Controller,
@@ -15,8 +16,14 @@ import {
     Delete,
     BadRequestException,
 } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { AuthGuard } from './guards/auth.guard';
+import { Request, Response } from 'express';
+import { StatusCodes } from 'http-status-codes';
+import { firebaseAdmin } from 'src/config/firebase.config';
+import { DecodedIdToken } from 'firebase-admin/lib/auth/token-verifier';
+import { ApiCookieAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { IAuthData, IGoogleAuthRegister } from '@auth/interfaces/main.interface';
+import { UsersService } from '@auth/users/users.service';
+
 import {
     AuthLoginDto,
     AuthSignUpDto,
@@ -24,19 +31,21 @@ import {
     ForgotPasswordDto,
     ResetPasswordDto,
 } from './dto/auth.dto';
-import { Request, Response } from 'express';
-import { StatusCodes } from 'http-status-codes';
-import { firebaseAdmin } from 'src/config/firebase.config';
-import { DecodedIdToken } from 'firebase-admin/lib/auth/token-verifier';
-import { ApiCookieAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { AuthGuard } from './guards/auth.guard';
+import { AuthService } from './auth.service';
 
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-    constructor(private authService: AuthService) { }
+    constructor(
+        private authService: AuthService,
+        private usersService: UsersService
+    ) { }
 
 
+    @UsePipes(new ValidationPipe())
+    @HttpCode(StatusCodes.OK)
     @Post('google-login')
     @ApiOperation({ summary: 'Google Auth' })
     @ApiResponse({ status: 200, description: 'Google Auth' })
@@ -46,7 +55,10 @@ export class AuthController {
                 .auth()
                 .verifyIdToken(idToken);
 
-            return decodedToken;
+            const userGoogle = this.authService.googleRegister(decodedToken as unknown as IGoogleAuthRegister);
+
+            return userGoogle;
+
         } catch (error) {
             if (error instanceof Error) {
                 throw new BadRequestException(error.message);
@@ -62,18 +74,9 @@ export class AuthController {
     @ApiResponse({ status: 200, description: 'Register' })
     async register(
         @Body() dto: AuthSignUpDto,
-        @Res({ passthrough: true }) res: Response,
-    ): Promise<any> {
+    ): Promise<IAuthData> {
         try {
-
-            console.log('dto', dto);
-            const { refreshToken, ...data } = await this.authService.register(dto);
-
-
-            console.log('data', data);
-
-            this.authService.addRefreshTokenToResponse(res, refreshToken!);
-
+            const data = await this.authService.register(dto);
             return data;
         } catch (error) {
             if (error instanceof Error) {
@@ -90,16 +93,11 @@ export class AuthController {
     @ApiResponse({ status: 200, description: 'Login' })
     async login(
         @Body() dto: AuthLoginDto,
-        @Res({ passthrough: true }) res: Response,
-    ): Promise<any> {
-        const { refreshToken, ...data } = await this.authService.login(dto);
+    ): Promise<IAuthData> {
+        const data = await this.authService.login(dto);
         if (!data) {
             throw new NotFoundException('Something went wrong');
         }
-
-        console.log('data', refreshToken);
-
-        this.authService.addRefreshTokenToResponse(res, refreshToken!);
 
         return data;
     }
@@ -115,31 +113,35 @@ export class AuthController {
         const result = this.authService.removeRefreshTokenFromResponse(res);
         return result;
     }
+    // change logics in refresh-token
 
     @UsePipes(new ValidationPipe())
     @HttpCode(StatusCodes.OK)
-    @Post('login/access-token')
-    @ApiOperation({ summary: 'Access Token' })
-    @ApiResponse({ status: 200, description: 'Access Token' })
+    @Post('refresh-token')
+    @ApiOperation({ summary: 'Refresh Token' })
+    @ApiResponse({ status: 200, description: 'Refresh Token' })
     async getNewTokens(
-        @Req() req: Request,
-        @Res({ passthrough: true }) res: Response,
+        @Body() refreshToken: { refreshToken: string },
     ) {
-        const refreshTOenFromCookie =
-            req.cookies[this.authService.REFRESH_TOKEN_NAME];
+        try {
 
-        if (!refreshTOenFromCookie) {
-            this.authService.removeRefreshTokenFromResponse(res);
-            throw new NotFoundException('Refresh token not found');
+            if (!refreshToken) {
+                throw new BadRequestException('username token not found');
+            }
+
+            const data = await this.authService.getNewAccessToken(refreshToken.refreshToken);
+
+            if (!data) {
+                throw new NotFoundException('Failed to generate new tokens');
+            }
+
+            return data;
+        } catch (error) {
+            if (error instanceof Error) {
+                throw new BadRequestException(`getNewTokens error: ${error.message}`);
+            }
+            throw new BadRequestException('An unknown error occurred');
         }
-
-        const { refreshToken, ...data } = await this.authService.getNewTokens(
-            refreshTOenFromCookie,
-        );
-
-        this.authService.addRefreshTokenToResponse(res, refreshToken);
-
-        return data;
     }
 
     @UsePipes(new ValidationPipe())
@@ -157,7 +159,7 @@ export class AuthController {
             res.status(StatusCodes.OK).send('Email verified');
         } catch (error) {
             if (error instanceof Error) {
-                throw new NotFoundException('verifyEmail error: ' + error.message);
+                throw new NotFoundException(`verifyEmail error: ${error.message}`);
             }
             throw new NotFoundException('An unknown error occurred');
         }
@@ -177,7 +179,7 @@ export class AuthController {
             res.status(StatusCodes.OK).send('Email sent');
         } catch (error) {
             if (error instanceof Error) {
-                throw new NotFoundException('resendEmail error: ' + error.message);
+                throw new NotFoundException(`resendEmail error: ${error.message}`);
             }
             throw new NotFoundException('An unknown error occurred');
         }
@@ -201,7 +203,7 @@ export class AuthController {
             });
         } catch (error) {
             if (error instanceof Error) {
-                throw new NotFoundException('forgotPassword error: ' + error.message);
+                throw new NotFoundException(`forgotPassword error: ${error.message}`);
             }
             throw new NotFoundException('An unknown error occurred');
         }
@@ -229,7 +231,7 @@ export class AuthController {
             return res.status(StatusCodes.OK).send({ message: 'Password reset' });
         } catch (error) {
             if (error instanceof Error) {
-                throw new NotFoundException('resetPassword error: ' + error.message);
+                throw new NotFoundException(`resetPassword error: ${error.message}`);
             }
             throw new NotFoundException('An unknown error occurred');
         }
@@ -258,7 +260,7 @@ export class AuthController {
             return res.status(StatusCodes.OK).send({ message: 'Password changed' });
         } catch (error) {
             if (error instanceof Error) {
-                throw new NotFoundException('changePassword error: ' + error.message);
+                throw new NotFoundException(`changePassword error: ${error.message}`);
             }
             throw new NotFoundException('An unknown error occurred');
         }
@@ -277,7 +279,7 @@ export class AuthController {
             return res.status(StatusCodes.OK).send({ message: 'Account deleted' });
         } catch (error) {
             if (error instanceof Error) {
-                throw new NotFoundException('deleteAccount error: ' + error.message);
+                throw new NotFoundException(`deleteAccount error: ${error.message}`);
             }
             throw new NotFoundException('An unknown error occurred');
         }
@@ -311,4 +313,20 @@ export class AuthController {
             data: req.currentUser,
         };
     }
+
+    @UseGuards(AuthGuard)
+    @HttpCode(StatusCodes.OK)
+    @Get('authenticated')
+    async check(@Req() req: Request) {
+
+        const getUser = await this.usersService.getUserByEmail(req.currentUser?.email as string);
+        const { password, ...rest } = getUser;
+
+        return {
+            isAuthenticated: true,
+            data: rest,
+        };
+    }
+
+
 }

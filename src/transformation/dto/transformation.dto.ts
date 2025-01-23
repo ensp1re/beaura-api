@@ -20,7 +20,7 @@ export class TransformationDto {
 }
 
 export class CreateTransformationDto {
-    @ApiProperty({ example: "6727e1cb83261f541471a403", description: 'User ID' })
+    @ApiProperty({ example: '6727e1cb83261f541471a403', description: 'User ID' })
     @IsString()
     userId: string | undefined;
 
@@ -33,7 +33,7 @@ export class CreateTransformationDto {
     title?: string;
 
     @ApiProperty({
-        example: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_FflWswTCQqbbiuk4PJaL1_73k4VwSrSHYA&s",
+        example: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_FflWswTCQqbbiuk4PJaL1_73k4VwSrSHYA&s',
         description: 'Source image for the transformation', required: false
     })
     @IsString()

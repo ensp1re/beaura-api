@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import {
     BadGatewayException,
     Body,
@@ -8,10 +10,11 @@ import {
     UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { UsersService } from './users.service';
 import { Roles, RolesGuard } from 'src/auth/guards/role.guard';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { Role } from '@auth/interfaces/transformation.interface';
+
+import { UsersService } from './users.service';
 
 @ApiTags('users')
 @Controller('users')

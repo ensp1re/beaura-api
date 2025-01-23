@@ -1,9 +1,13 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-wrapper-object-types */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsString, MinLength } from 'class-validator';
 import {
+    IsEmail, IsString, MinLength,
     registerDecorator,
     ValidationOptions,
     ValidationArguments,
+    IsOptional,
 } from 'class-validator';
 
 export function IsEmailOrUsername(validationOptions?: ValidationOptions) {
@@ -33,7 +37,7 @@ export function IsEmailOrUsername(validationOptions?: ValidationOptions) {
 
 export class AuthSignUpDto {
     @ApiProperty({
-        example: 'john_doe',
+        example: 'john_does',
         description: 'The username of the user',
     })
     @IsString()
@@ -43,7 +47,7 @@ export class AuthSignUpDto {
     username!: string;
 
     @ApiProperty({
-        example: 'john.doe@example.com',
+        example: 'john.does@example.com',
         description: 'The email of the user',
     })
     @IsEmail()
@@ -60,11 +64,25 @@ export class AuthSignUpDto {
     password!: string;
 
     @ApiProperty({
+        example: 'bio123',
+        description: 'bio',
+        required: false,
+    })
+    @MinLength(6, {
+        message: 'Bio must not be that short!',
+    })
+    @IsOptional()
+    @IsString()
+    bio?: string;
+
+    @ApiProperty({
         example: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQF-ts8ef0ULc3wXS7uMqNbMbMl0sspMzxObsJIL8tobMq1h3LyZ1GMjyUTSfljpiiiRJs&usqp=CAU',
         description: 'The profile picture URL of the user',
+        required: false,
     })
+    @IsOptional()
     @IsString()
-    profilePicture!: string;
+    profilePicture?: string;
 }
 
 export class AuthLoginDto {
@@ -144,4 +162,14 @@ export class VerifyEmailDto {
     })
     @IsString()
     emailVerificationToken!: string;
+}
+
+export class RefreshToken {
+    @ApiProperty({
+        example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImpvaG5fZG9lcyIsImlkIjoiNjc4YTk3ZjNlNzk1ZjAyNDMwZmU0NjQ0IiwiZW1haWwiOiJqb2huLmRvZXNAZXhhbXBsZS5jb20iLCJyb2xlIjoiVXNlciIsImlhdCI6MTczNzEzNjExNiwiZXhwIjoxNzM3NzQwOTE2fQ.3qyw22B7KOfWxVkPjZB6p897GbKk9igtRbwjMF0U7kU',
+        description: 'new refresh token',
+    })
+
+    @IsString()
+    refreshToken!: string;
 }

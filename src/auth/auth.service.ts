@@ -1,21 +1,27 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
+import * as crypto from 'crypto';
+
 import {
     BadRequestException,
     Injectable,
     NotFoundException,
     UnauthorizedException,
 } from '@nestjs/common';
-import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
-import { AuthSignUpDto, AuthLoginDto } from './dto/auth.dto';
 import { verify } from 'argon2';
 import { Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 import { UploadApiResponse } from 'cloudinary';
-import * as crypto from 'crypto';
-import { toLowerCase } from 'src/lib/utils';
+import { generateHashPassword, toLowerCase } from 'src/lib/utils';
 import { IAuthDocument, IAuthResponse, IIssueTokensResponse, IPayload } from '@auth/interfaces/transformation.interface';
+import { IGoogleAuthRegister } from '@auth/interfaces/main.interface';
+
+import { UsersService } from '../users/users.service';
+
+import { AuthSignUpDto, AuthLoginDto } from './dto/auth.dto';
+
 
 @Injectable()
 /**
@@ -74,46 +80,44 @@ export class AuthService {
 
     async register(dto: AuthSignUpDto): Promise<IAuthResponse> {
         try {
-
-            console.log(dto, "dto2");
             const existingUser = await this.usersService.getUserByUsernameOrEmail(
                 dto.username,
                 dto.email,
             );
 
-            console.log(existingUser);
 
             if (existingUser) {
                 throw new BadRequestException('These credentials are already taken');
             }
 
             const profilePublicId: string = uuidv4();
+            let uploadResult: UploadApiResponse | undefined;
 
 
-            console.log(profilePublicId);
+            if (dto.profilePicture) {
+                uploadResult =
+                    (await this.cloudinaryService.uploadImage(
+                        dto.profilePicture as string,
+                        profilePublicId as string,
+                        true,
+                        true,
+                    )) as UploadApiResponse;
 
-            const uploadResult: UploadApiResponse | undefined =
-                (await this.cloudinaryService.uploadImage(
-                    dto.profilePicture as string,
-                    profilePublicId as string,
-                    true,
-                    true,
-                )) as UploadApiResponse;
 
+                console.log(uploadResult);
 
-            console.log(uploadResult);
-
-            if (!uploadResult.public_id) {
-                throw new BadRequestException(
-                    'Could not upload image to cloudinary. Please try again',
-                );
+                if (!uploadResult.public_id) {
+                    throw new BadRequestException(
+                        'Could not upload image to cloudinary. Please try again',
+                    );
+                }
             }
+
 
             const randomBytes = await Promise.resolve(crypto.randomBytes(16));
             const randomCharacters = randomBytes.toString('hex');
 
             const url: string = `${process.env.BASE_URL}/verify-email?token=${randomCharacters}`;
-
             console.log(url);
 
             // Example of data
@@ -133,13 +137,17 @@ export class AuthService {
                 email: toLowerCase(dto.email),
                 profilePublicId,
                 password: dto.password,
-                profilePicture: uploadResult?.secure_url,
+                profilePicture: uploadResult?.secure_url || '',
                 emailVerificationToken: randomCharacters,
+                bio: dto?.bio,
             };
 
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const { password, ...user } =
-                await this.usersService.createUser(authData);
+            const user
+                = await this.usersService.createUser(authData);
+
+
+            const { password, ...newData } = user;
 
             const tokens = this.issueTokens({
                 _id: user._id,
@@ -150,7 +158,7 @@ export class AuthService {
 
             return {
                 message: 'User was created',
-                user,
+                user: newData,
                 ...tokens,
             };
         } catch (error) {
@@ -158,6 +166,73 @@ export class AuthService {
                 throw new BadRequestException(error.message);
             }
             throw new BadRequestException('An unknown error occurred');
+        }
+    }
+
+    async googleRegister(data: IGoogleAuthRegister): Promise<IAuthResponse | undefined> {
+        try {
+            const user = await this.usersService.getUserByEmail(data.email);
+
+            if (!user) {
+                const registerData: IAuthDocument = {
+                    username: data.email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, ''),
+                    email: data.email,
+                    profilePicture: data.picture,
+                    emailVerified: data.email_verified,
+                    password: generateHashPassword(),
+                    nickname: data.name!,
+                };
+
+                const randomBytes = await Promise.resolve(crypto.randomBytes(16));
+                const randomCharacters = randomBytes.toString('hex');
+
+                const url: string = `${process.env.BASE_URL}/verify-email?token=${randomCharacters}`;
+                console.log(url);
+
+                const newUser = await this.usersService.createUser(registerData);
+
+                const { password, ...createdUser } = newUser;
+
+                if (!createdUser) {
+                    throw new BadRequestException('Something went wrong!');
+                }
+
+                const tokens = this.issueTokens({
+                    _id: createdUser._id,
+                    username: createdUser.username as string,
+                    email: createdUser.email as string,
+                    role: createdUser.role!,
+                });
+
+                return {
+                    message: 'Logged in!',
+                    user: createdUser,
+                    ...tokens,
+                };
+            }
+
+            if (user) {
+                const newLoggedInokens = this.issueTokens({
+                    _id: user._id,
+                    username: user.username as string,
+                    email: user.email as string,
+                    role: user.role!,
+                });
+
+                const { password, ...dataWithoutPass } = user;
+
+                return {
+                    message: 'User was successfully logged in',
+                    user: dataWithoutPass,
+                    ...newLoggedInokens,
+                };
+            }
+        } catch (error) {
+            if (error instanceof Error) {
+                throw new BadRequestException(error.message);
+            }
+            throw new BadRequestException('An unknown error occurred');
+
         }
     }
 
@@ -191,7 +266,9 @@ export class AuthService {
 
     async login(dto: AuthLoginDto): Promise<IAuthResponse> {
         try {
-            const { password, ...user } = await this.validateUser(dto);
+            const user = await this.validateUser(dto);
+
+            const { password, ...userWithoutPassword } = user;
 
             const tokens = this.issueTokens({
                 _id: user._id,
@@ -202,7 +279,7 @@ export class AuthService {
 
             return {
                 message: 'User was successfully logged in',
-                user,
+                user: userWithoutPassword,
                 ...tokens,
             };
         } catch (error) {
@@ -290,14 +367,33 @@ export class AuthService {
         };
     }
 
-    async getNewTokens(refreshToken: string) {
-        const result = await this.jwtService.verify(refreshToken);
-        if (!result) {
-            throw new UnauthorizedException('Invalid refresh token');
-        }
+    async getNewAccessToken(refreshToken: string): Promise<{ accessToken: string }> {
+        try {
+            const payload = await this.jwtService.verify(
+                refreshToken,
+                {
+                    secret: process.env.JWT_SECRET,
+                }
+            );
 
+            const { accessToken } = this.issueTokens({
+                _id: payload.id,
+                username: payload.username,
+                email: payload.email,
+                role: payload.role,
+            });
+
+            return { accessToken };
+
+        } catch (error) {
+            throw new BadRequestException(
+                `getNewAccessToken error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+
+    async getNewTokens(username: string) {
         const { password, ...user } = await this.usersService.findUserByUsername(
-            result.username,
+            username,
         );
         if (!user) {
             throw new NotFoundException('User not found');
@@ -312,7 +408,6 @@ export class AuthService {
 
         return {
             message: 'New tokens were successfully issued',
-            user,
             ...tokens,
         };
     }

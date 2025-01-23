@@ -3,6 +3,8 @@
 /node_modules
 /build
 
+.git
+.vscode
 # Logs
 logs
 *.log

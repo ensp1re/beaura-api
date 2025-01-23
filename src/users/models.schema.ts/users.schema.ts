@@ -2,9 +2,6 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 import { ITransformationDocument } from 'src/interfaces/main.interface';
 
-
-
-
 @Schema()
 export class User extends Document {
     @Prop({ type: String, unique: true, required: true, trim: true, ref: 'User' })
@@ -16,8 +13,15 @@ export class User extends Document {
     @Prop({ type: String, required: true, trim: true })
     password: string | undefined;
 
+    @Prop({ type: String, required: false, trim: true })
+    nickname: string | undefined;
+
+    @Prop({ type: Boolean, required: false, default: false })
+    isPrivate: boolean | undefined;
+
     @Prop({
         type: String,
+        required: false,
         default:
             'https://res.cloudinary.com/dk5b3j3sh/image/upload/v1626820004/avatars/blank-profile-picture-973460_640',
     })
@@ -25,6 +29,9 @@ export class User extends Document {
 
     @Prop({ type: String, default: '' })
     profilePublicId: string | undefined;
+
+    @Prop({ type: String, default: '', required: false })
+    bio: string | undefined;
 
     @Prop({ type: Boolean, default: false })
     emailVerified: boolean | undefined;

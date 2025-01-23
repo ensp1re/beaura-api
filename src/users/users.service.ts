@@ -1,8 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { hash } from 'argon2';
 import { IAuthDocument, IUpdatePasswordPayload, IVerifyEmailPayload } from '@auth/interfaces/transformation.interface';
+
 import { User } from './models.schema.ts/users.schema';
 
 @Injectable()
@@ -28,7 +30,7 @@ export class UsersService {
             return userData;
         } catch (error) {
             if (error instanceof Error) {
-                throw new Error('createUser error: ' + error.message);
+                throw new Error(`createUser error: ${error.message}`);
             }
             throw error;
         }
@@ -36,7 +38,7 @@ export class UsersService {
 
     async findUserByUsername(username: string): Promise<IAuthDocument> {
         try {
-            const user = await this.userModel.findOne({ username });
+            const user = await this.userModel.findOne({ username }).lean<IAuthDocument>().exec();
             if (!user) {
                 throw new NotFoundException('User not found');
             }
@@ -44,7 +46,7 @@ export class UsersService {
             return user as IAuthDocument;
         } catch (error) {
             if (error instanceof Error) {
-                throw new Error('findUserByUsername error: ' + error.message);
+                throw new Error(`findUserByUsername error: ${error.message}`);
             }
             throw error;
         }
@@ -66,7 +68,7 @@ export class UsersService {
         } catch (error) {
             if (error instanceof Error) {
                 throw new Error(
-                    'getUserByEmailVerificationToken error: ' + error.message,
+                    `getUserByEmailVerificationToken error: ${error.message}`,
                 );
             }
             throw error;
@@ -87,7 +89,7 @@ export class UsersService {
             return user as IAuthDocument;
         } catch (error) {
             if (error instanceof Error) {
-                throw new Error('getUserByUsernameOrEmail error: ' + error.message);
+                throw new Error(`getUserByUsernameOrEmail error: ${error.message}`);
             }
             throw error;
         }
@@ -95,17 +97,15 @@ export class UsersService {
 
     async getUserByEmail(email: string): Promise<IAuthDocument> {
         try {
-
-            console.log(email);
             const user = await this.userModel
                 .findOne({ email })
-                .lean()
+                .lean<IAuthDocument>()
                 .exec();
 
             return user as IAuthDocument;
         } catch (error) {
             if (error instanceof Error) {
-                throw new Error('getUserByEmail error: ' + error.message);
+                throw new Error(`getUserByEmail error: ${error.message}`);
             }
             throw error;
         }
@@ -120,7 +120,7 @@ export class UsersService {
             return user as IAuthDocument;
         } catch (error) {
             if (error instanceof Error) {
-                throw new Error('getUserById error: ' + error.message);
+                throw new Error(`getUserById error: ${error.message}`);
             }
             throw error;
         }
@@ -140,7 +140,7 @@ export class UsersService {
         } catch (error) {
             if (error instanceof Error) {
                 throw new NotFoundException(
-                    'updateVerifyEmailField error: ' + error.message,
+                    `updateVerifyEmailField error: ${error.message}`,
                 );
             }
             throw error;
@@ -170,7 +170,7 @@ export class UsersService {
             };
         } catch (error) {
             if (error instanceof Error) {
-                throw new Error('updatePasswordResetToken error: ' + error.message);
+                throw new Error(`updatePasswordResetToken error: ${error.message}`);
             }
             throw error;
         }
@@ -188,7 +188,7 @@ export class UsersService {
             await this.userModel.findByIdAndUpdate(userId, data);
         } catch (error) {
             if (error instanceof Error) {
-                throw new Error('updatePassword error: ' + error.message);
+                throw new Error(`updatePassword error: ${error.message}`);
             }
             throw error;
         }
@@ -210,7 +210,7 @@ export class UsersService {
             return user as IAuthDocument;
         } catch (error) {
             if (error instanceof Error) {
-                throw new Error('getUserByPasswordResetToken error: ' + error.message);
+                throw new Error(`getUserByPasswordResetToken error: ${error.message}`);
             }
             throw error;
         }
@@ -227,7 +227,7 @@ export class UsersService {
             );
         } catch (error) {
             if (error instanceof Error) {
-                throw new Error('updateEmailVerificationToken error: ' + error.message);
+                throw new Error(`updateEmailVerificationToken error: ${error.message}`);
             }
             throw error;
         }
@@ -238,7 +238,7 @@ export class UsersService {
             await this.userModel.updateOne({ _id: userId }, { status });
         } catch (error) {
             if (error instanceof Error) {
-                throw new Error('updateProfileStatus error: ' + error.message);
+                throw new Error(`updateProfileStatus error: ${error.message}`);
             }
             throw error;
         }
@@ -249,7 +249,7 @@ export class UsersService {
             await this.userModel.findByIdAndDelete(userId);
         } catch (error) {
             if (error instanceof Error) {
-                throw new Error('deleteAccount error: ' + error.message);
+                throw new Error(`deleteAccount error: ${error.message}`);
             }
             throw error;
         }

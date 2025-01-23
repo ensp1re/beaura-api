@@ -1,24 +1,24 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
+/* eslint-disable import/no-named-as-default */
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
-import { FileLogger } from './lib/logger';
 import cookieParser from 'cookie-parser';
 import { ValidationPipe } from '@nestjs/common';
 import rateLimit from 'express-rate-limit';
-import { NextFunction, Request, Response } from 'express';
+import express, { NextFunction, Request, Response } from 'express';
 import compression from 'compression';
-import express from 'express';
 import helmet from 'helmet';
 import cookieSession from 'cookie-session';
-import { StatusCodes } from 'http-status-codes';
-import cors from 'cors';
 import { DocumentBuilder, SwaggerCustomOptions, SwaggerModule } from '@nestjs/swagger';
+
+import { FileLogger } from './lib/logger';
+import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: new FileLogger(),
   });
 
-  console.log('App is running in ' + process.env.NODE_ENV + ' mode');
+  console.log(`App is running in ${process.env.NODE_ENV} mode`);
 
   app.setGlobalPrefix('api');
 
@@ -51,12 +51,12 @@ async function bootstrap() {
           'Strict-Transport-Security',
           'max-age=31536000; includeSubDomains',
         );
-        res.setHeader('Content-Security-Policy', "default-src 'self'");
+        res.setHeader('Content-Security-Policy', 'default-src \'self\'');
 
         next();
       });
     });
-  })
+  });
 
   app.use(compression());
   app.use(express.json({ limit: '10mb' }));
@@ -74,7 +74,7 @@ async function bootstrap() {
       secure: process.env.NODE_ENV === 'production',
       ...(process.env.NODE_ENV === 'production' && { sameSite: 'none' }),
     })
-  )
+  );
 
   // that's the middleware that will check if the user has a refresh token
   // delete after testing
@@ -85,32 +85,37 @@ async function bootstrap() {
     next();
   });
 
-  app.use(cors({
-    origin: process.env.BASE_URL,
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  }))
+  // app.use(cors({
+  //   origin: process.env.BASE_URL || 'http://localhost:3000',
+  //   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  //   allowedHeaders: ['Content-Type', 'Authorization'],
+  //   credentials: true,
+  // }));
 
-  app.use((err: Error, _req: Request, res: Response, next: NextFunction) => {
-    fileLogger.error(err.message, err.stack, 'Main.ts');
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-      message: 'Internal server error',
-    });
-    next();
+  app.enableCors({
+    origin: process.env.BASE_URL || 'http://localhost:3000',
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    credentials: true,
   });
 
-  const configSwagger = new DocumentBuilder().setTitle("Api for Beaura AI")
-    .setDescription("This is the API for Beaura AI")
-    .setVersion("1.0")
-    .addTag("beaura")
+  const configSwagger = new DocumentBuilder().setTitle('Api for Beaura AI')
+    .setDescription('This is the API for Beaura AI')
+    .setVersion('1.0')
+    .addTag('beaura')
     .addCookieAuth('refreshToken')
     .build();
+
+  app.use((_req: Request, res: Response, next: NextFunction) => {
+    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+    res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+    next();
+  });
 
   const customOptions: SwaggerCustomOptions = {
     swaggerOptions: {
       withCredentials: true,
     }
-  }
+  };
 
   const document = SwaggerModule.createDocument(app, configSwagger);
   SwaggerModule.setup('api/docs', app, document, customOptions);

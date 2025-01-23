@@ -1,4 +1,5 @@
-import { ITransformationDocument } from "./main.interface";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { ITransformationDocument } from './main.interface';
 
 declare global {
   namespace Express {
@@ -35,9 +36,12 @@ export interface IAuthDocument {
   username?: string;
   email?: string;
   password?: string;
+  nickname?: string;
+  bio?: string;
   profilePicture?: string;
   profilePublicId?: string;
   emailVerified?: boolean;
+  isPrivate?: boolean;
   emailVerificationToken?: string;
   creditBalance?: number;
   status?: string; // free, starter, premium
