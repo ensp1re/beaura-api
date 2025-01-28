@@ -10,6 +10,7 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { configureCloudinary } from './config/cloudinary.config';
+import { MailModule } from './mail/mail.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { configureCloudinary } from './config/cloudinary.config';
       envFilePath: '.env',
     }),
     MongooseModule.forRoot(process.env.MONGO_URI!),
+    MailModule,
   ],
   providers: [
     { provide: FileLogger, useClass: FileLogger },

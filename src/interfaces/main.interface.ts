@@ -8,6 +8,10 @@ export interface ICreateTransformationPayload {
     userId: string;
     title: string;
     fromImage?: string;
+    tags?: string[];
+    isPublic?: boolean;
+    aspectRatio?: IAspectRatioOption;
+    isQuality?: boolean;
     toImage: string;
     transformationType?: string;
     prompt?: string;
@@ -34,7 +38,7 @@ export interface ITransformationDocument {
     userId: Types.ObjectId | undefined;
     title?: string;
     tags?: string[];
-    aspectRatio?: string;
+    aspectRatio?: IAspectRatioOption;
     isQuality?: boolean;
     fromImage?: string;
     toImage?: string;
@@ -78,4 +82,24 @@ export interface IGoogleAuthRegister {
     picture: string;
     email_verified: boolean;
     nickname: string;
+}
+
+
+export interface ITransformationDto {
+    userId: string,
+    title: string,
+    prompt: string,
+    transformationType: string,
+    tags: string[],
+    selectedImage: string,
+    isPublic: boolean,
+    aspectRatio: IAspectRatioOption,
+    isQuality: boolean
+}
+
+export interface IAspectRatioOption {
+    aspectRatio: string;
+    label: string;
+    width: number;
+    height: number;
 }

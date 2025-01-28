@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-import { ILikeTransformationPayload, IShareTransformationPayload } from 'src/interfaces/main.interface';
+import { IAspectRatioOption, ILikeTransformationPayload, IShareTransformationPayload } from 'src/interfaces/main.interface';
 
 @Schema()
 export class TranformationImage extends Document {
@@ -19,8 +19,8 @@ export class TranformationImage extends Document {
     @Prop({ type: [String], default: [], required: false })
     tags: string[] | undefined;
 
-    @Prop({ type: String, required: false, default: '' })
-    aspectRatio: string | undefined;
+    @Prop({ type: String, required: false, default: null })
+    aspectRatio: IAspectRatioOption | undefined;
 
     @Prop({ type: Boolean, default: false, required: false })
     isQuality: boolean | undefined;

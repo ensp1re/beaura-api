@@ -1,7 +1,6 @@
 import { IGenerativeReplace } from '@auth/interfaces/main.interface';
 import { Injectable } from '@nestjs/common';
 import { UploadApiErrorResponse, UploadApiResponse } from 'cloudinary';
-
 import cloudinary from 'src/config/cloudinary.config';
 
 @Injectable()
@@ -30,16 +29,16 @@ export class CloudinaryService {
                         error: UploadApiErrorResponse | undefined,
                         result: UploadApiResponse | undefined,
                     ) => {
-                        if (error) return reject(error);
+                        if (error) { return reject(error); }
                         resolve(result);
                     },
                 );
             });
         } catch (error: unknown) {
             if (error instanceof Error) {
-                throw new Error('uploadImage error: ' + error.message);
+                throw new Error(`uploadImage error: ${error.message}`);
             } else {
-                throw new Error('uploadImage error: ' + String(error));
+                throw new Error(`uploadImage error: ${String(error)}`);
             }
         }
     }
@@ -73,7 +72,7 @@ export class CloudinaryService {
                             error: UploadApiErrorResponse | undefined,
                             result: UploadApiResponse | undefined,
                         ) => {
-                            if (error) return reject(error);
+                            if (error) { return reject(error); }
                             resolve(result);
                         },
                     );
@@ -83,9 +82,9 @@ export class CloudinaryService {
             return uploadResponse;
         } catch (error: unknown) {
             if (error instanceof Error) {
-                throw new Error('generativeReplace error: ' + error.message);
+                throw new Error(`generativeReplace error: ${error.message}`);
             } else {
-                throw new Error('generativeReplace error: ' + String(error));
+                throw new Error(`generativeReplace error: ${String(error)}`);
             }
         }
     }

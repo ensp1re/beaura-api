@@ -1,17 +1,17 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { AuthModule } from 'src/auth/auth.module';
 import { UsersModule } from 'src/users/users.module';
-import { TransformationService } from './transformation.service';
-import { TransformationController } from './transformation.controller';
-import { forwardRef } from '@nestjs/common';
-import {
-  TranformationImage,
-  tranformationSchema,
-} from './models/transformation.schema';
 import { MongooseModule } from '@nestjs/mongoose';
 import { CloudinaryModule } from 'src/cloudinary/cloudinary.module';
 import { UsersService } from 'src/users/users.service';
 import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
+
+import {
+  TranformationImage,
+  tranformationSchema,
+} from './models/transformation.schema';
+import { TransformationController } from './transformation.controller';
+import { TransformationService } from './transformation.service';
 
 @Module({
   exports: [TransformationService],
@@ -27,4 +27,4 @@ import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
     ]),
   ],
 })
-export class TransformationModule {}
+export class TransformationModule { }

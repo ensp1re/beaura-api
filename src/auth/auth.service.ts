@@ -17,6 +17,7 @@ import { UploadApiResponse } from 'cloudinary';
 import { generateHashPassword, toLowerCase } from 'src/lib/utils';
 import { IAuthDocument, IAuthResponse, IIssueTokensResponse, IPayload } from '@auth/interfaces/transformation.interface';
 import { IGoogleAuthRegister } from '@auth/interfaces/main.interface';
+import { MailService } from '@auth/mail/mail.service';
 
 import { UsersService } from '../users/users.service';
 
@@ -76,6 +77,7 @@ export class AuthService {
         private usersService: UsersService,
         private jwtService: JwtService,
         private cloudinaryService: CloudinaryService,
+        private mailService: MailService,
     ) { }
 
     async register(dto: AuthSignUpDto): Promise<IAuthResponse> {
@@ -116,9 +118,20 @@ export class AuthService {
 
             const randomBytes = await Promise.resolve(crypto.randomBytes(16));
             const randomCharacters = randomBytes.toString('hex');
+            const emailResponse = await this.mailService.sendWelcomeEmail(dto.email, dto.username);
+
+            if (!emailResponse.success) {
+                throw new BadRequestException('Could not send email verification link');
+            }
 
             const url: string = `${process.env.BASE_URL}/verify-email?token=${randomCharacters}`;
-            console.log(url);
+
+            const emailVerificationResponse = await this.mailService.sendVerificationEmail(dto.email, dto.username, url);
+
+            if (!emailVerificationResponse.success) {
+                throw new BadRequestException('Could not send email verification link');
+            }
+
 
             // Example of data
             // dto: {
@@ -251,7 +264,11 @@ export class AuthService {
 
             const url: string = `${process.env.BASE_URL}/verify-email?token=${randomCharacters}`;
 
-            console.log(url);
+            const emailVerificationResponse = await this.mailService.sendVerificationEmail(user.email!, user.username!, url);
+
+            if (!emailVerificationResponse.success) {
+                throw new BadRequestException('Could not send email verification link');
+            }
 
             await this.usersService.updateEmailVerificationToken(
                 user._id,
@@ -422,6 +439,18 @@ export class AuthService {
                 throw new NotFoundException('User not found');
             }
 
+            const response = await this.mailService.sendGeneralNotificationEmail(
+                user.email!,
+                user.username!,
+                'Email Verification',
+                '<p>Your email has been successfully verified.</p>'
+            );
+
+            if (!response.success) {
+                throw new BadRequestException('Could not send email verification link');
+            }
+
+
             await this.usersService.updateVerifyEmailField(user._id, true);
         } catch (error) {
             throw new BadRequestException(
@@ -441,11 +470,13 @@ export class AuthService {
             const randomBytes = await Promise.resolve(crypto.randomBytes(16));
             const randomCharacters = randomBytes.toString('hex');
 
-            // add email notification here later
+            const url: string = `${process.env.BASE_URL}/reset-password?token=${randomCharacters}`;
 
-            const url: string = `${process.env.BASE_URL}/reset-password?token${randomCharacters}`;
+            const emailVerificationResponse = await this.mailService.sendResetPasswordEmail(user.email!, user.username!, url);
 
-            console.log(url);
+            if (!emailVerificationResponse.success) {
+                throw new BadRequestException('Could not send email verification link');
+            }
 
             const response = await this.usersService.updatePasswordResetToken(
                 user._id,
@@ -477,7 +508,17 @@ export class AuthService {
                 throw new UnauthorizedException('Password reset token has expired');
             }
 
-            // add email notification here later
+
+            const response = await this.mailService.sendGeneralNotificationEmail(
+                user.email!,
+                user.username!,
+                'Password Reset',
+                '<p>Your password has been successfully reset.</p>'
+            );
+
+            if (!response.success) {
+                throw new BadRequestException('Could not send email verification link');
+            }
 
             await this.usersService.updatePassword(user._id, password);
         } catch (error) {
@@ -505,6 +546,17 @@ export class AuthService {
                 throw new UnauthorizedException('Current password is incorrect');
             }
 
+            const response = await this.mailService.sendGeneralNotificationEmail(
+                user.email!,
+                user.username!,
+                'Password Change',
+                '<p>Your password has been successfully changed.</p>'
+            );
+
+            if (!response.success) {
+                throw new BadRequestException('Could not send email verification link');
+            }
+
             await this.usersService.updatePassword(user._id, newPassword);
         } catch (error) {
             throw new BadRequestException(
@@ -519,6 +571,17 @@ export class AuthService {
 
             if (!user) {
                 throw new NotFoundException('User not found');
+            }
+
+            const response = await this.mailService.sendGeneralNotificationEmail(
+                user.email!,
+                user.username!,
+                'Account Deletion',
+                '<p>Your account has been successfully deleted.</p>'
+            );
+
+            if (!response.success) {
+                throw new BadRequestException('Could not send email verification link');
             }
 
             await this.usersService.deleteAccount(user._id);

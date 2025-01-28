@@ -9,13 +9,14 @@ import {
     Res,
     UseGuards,
 } from '@nestjs/common';
-import { TransformationService } from './transformation.service';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
-import { CreateTransformationDto } from './dto/transformation.dto';
 import { StatusCodes } from 'http-status-codes';
 import { Response } from 'express';
-import { ITransformationDocument } from '@auth/interfaces/main.interface';
+import { ITransformationDocument, ITransformationDto } from '@auth/interfaces/main.interface';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+
+import { TransformationService } from './transformation.service';
+import { TransformationDto } from './dto/transformation.dto';
 
 @ApiTags('Transformation')
 @Controller('transformation')
@@ -29,12 +30,13 @@ export class TransformationController {
     @ApiResponse({ status: 201, description: 'Transformation created successfully.' })
     @ApiResponse({ status: 400, description: 'Bad Request.' })
     async createTransformation(
-        @Body() dto: CreateTransformationDto,
+        @Body() dto: TransformationDto,
         @Res() res: Response,
     ): Promise<Response> {
         try {
+
             const result =
-                await this.transformationService.createOneImageTransformation(dto as any);
+                await this.transformationService.createOneImageTransformation(dto as unknown as ITransformationDto);
             const response = { ...result, userId: result?.userId?.toString() };
 
             return res.status(StatusCodes.CREATED).json({
@@ -66,7 +68,7 @@ export class TransformationController {
         } catch (error) {
             if (error instanceof Error) {
                 throw new BadRequestException(
-                    'getTransformationsByUserId error: ' + error.message,
+                    `getTransformationsByUserId error: ${error.message}`,
                 );
             }
             throw new BadRequestException('An unknown error occurred');
@@ -91,7 +93,7 @@ export class TransformationController {
         } catch (error) {
             if (error instanceof Error) {
                 throw new BadRequestException(
-                    'getTransformationById error: ' + error.message,
+                    `getTransformationById error: ${error.message}`,
                 );
             }
             throw new BadRequestException('An unknown error occurred');

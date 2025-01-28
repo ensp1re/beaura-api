@@ -10,6 +10,7 @@ import { RolesGuard } from './guards/role.guard';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
+import { MailModule } from '@auth/mail/mail.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { JwtStrategy } from './jwt.strategy';
         signOptions: { expiresIn: '7d' }
       }),
     }),
+    forwardRef(() => MailModule),
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, CloudinaryService, AuthGuard, RolesGuard],
