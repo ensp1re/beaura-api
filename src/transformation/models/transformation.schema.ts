@@ -2,7 +2,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { IAspectRatioOption, ILikeTransformationPayload, IShareTransformationPayload } from 'src/interfaces/main.interface';
 
-@Schema()
+@Schema({ timestamps: true })
 export class TranformationImage extends Document {
     @Prop({ type: Types.ObjectId, required: true, ref: 'User' })
     userId: Types.ObjectId | undefined;
@@ -28,10 +28,30 @@ export class TranformationImage extends Document {
     @Prop({ type: Boolean, default: false, required: false })
     isPublic: boolean | undefined;
 
-    @Prop({ type: [Object], default: [], required: false })
+    @Prop({
+        type:
+            [
+                {
+                    userId: { type: Types.ObjectId, ref: 'User' },
+                    transformationId: { type: Types.ObjectId, ref: 'TransformationImage' },
+                    createdAt: { type: Date, default: Date.now },
+                    updatedAt: { type: Date, default: Date.now },
+                }
+            ], default: []
+    })
     likes: ILikeTransformationPayload[] | undefined;
 
-    @Prop({ type: [Object], default: [], required: false })
+    @Prop({
+        type:
+            [
+                {
+                    userId: { type: Types.ObjectId, ref: 'User' },
+                    transformationId: { type: Types.ObjectId, ref: 'TransformationImage' },
+                    createdAt: { type: Date, default: Date.now },
+                    updatedAt: { type: Date, default: Date.now },
+                }
+            ], default: []
+    })
     shares: IShareTransformationPayload[] | undefined;
 
     @Prop({ type: String, required: false, default: '' })

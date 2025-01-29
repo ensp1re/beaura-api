@@ -20,13 +20,17 @@ export interface ICreateTransformationPayload {
 }
 
 export interface ILikeTransformationPayload {
-    transformationId: string;
     userId: string;
+    transformationId: string;
+    createdAt?: Date
+    updatedAt?: Date;
 }
 
 export interface IShareTransformationPayload {
-    transformationId: string;
     userId: string;
+    transformationId: string;
+    createdAt?: Date;
+    updatedAt?: Date;
 }
 
 export interface ITransformationDocument {

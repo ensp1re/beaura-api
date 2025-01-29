@@ -61,3 +61,24 @@ export class CreateTransformationDto {
     @IsString()
     fromImage?: string;
 }
+
+
+export class LikeTransformationDto {
+    @ApiProperty({ description: 'User ID', required: true })
+    @IsString()
+    userId!: string | undefined;
+
+    @ApiProperty({ description: 'Transformation ID', required: true })
+    @IsString()
+    transformationId!: string;
+}
+
+export class ShareTransformationDto {
+    @ApiProperty({ description: 'User ID', required: true })
+    @IsString()
+    userId!: string | undefined;
+
+    @ApiProperty({ description: 'Transformation ID', required: true })
+    @IsString()
+    transformationId!: string;
+}

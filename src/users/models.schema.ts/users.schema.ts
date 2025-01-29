@@ -57,7 +57,7 @@ export class User extends Document {
     @Prop({ type: Date, default: Date.now })
     passwordResetTokenExpires: Date | undefined;
 
-    @Prop({ type: [Object], default: [] })
+    @Prop({ type: [Object], ref: 'TranformationImage', default: [] })
     transformations: ITransformationDocument[] | undefined;
 
     @Prop({ type: String, default: 'User' })

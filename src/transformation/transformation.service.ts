@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   BadRequestException,
   Injectable,
@@ -9,7 +10,7 @@ import { UsersService } from 'src/users/users.service';
 import { v4 as uuidv4 } from 'uuid';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
-import { ICreateTransformationPayload, IGenerativeReplace, ITransformationDocument, ITransformationDto } from '@auth/interfaces/main.interface';
+import { ICreateTransformationPayload, IGenerativeReplace, ILikeTransformationPayload, IShareTransformationPayload, ITransformationDocument, ITransformationDto } from '@auth/interfaces/main.interface';
 import { createUrl } from '@auth/lib/utils';
 
 import { TranformationImage } from './models/transformation.schema';
@@ -17,7 +18,7 @@ import { TranformationImage } from './models/transformation.schema';
 @Injectable()
 export class TransformationService {
   private ITEM_RO_REPLACE: string =
-    'I need to change the haircut of the person in the photo but don\'t change anything except hair';
+    'haircut';
   constructor(
     @InjectModel(TranformationImage.name)
     private transformationModel: Model<TranformationImage>,
@@ -79,7 +80,7 @@ export class TransformationService {
       const transformation = new this.transformationModel(transformationData);
       await transformation.save();
 
-      return transformation.toObject();
+      return transformation.toObject() as ITransformationDocument;
     } catch (error) {
       if (error instanceof Error) {
         throw new Error(`createOneImageTransformation error: ${error.message}`);
@@ -121,7 +122,9 @@ export class TransformationService {
       const transformation = await this.transformationModel
         .findById(transformationId)
         .lean()
-        .exec();
+        .populate('userId', 'username email profilePicture')
+        .populate('likes.userId', 'username email profilePicture')
+        .populate('shares.userId', 'username email profilePicture').exec();
 
       if (!transformation) {
         throw new NotFoundException('Transformation not found');
@@ -144,6 +147,9 @@ export class TransformationService {
       const transformations = await this.transformationModel
         .find({ transformationType: type })
         .lean()
+        .populate('userId', 'username email profilePicture')
+        .populate('likes.userId', 'username email profilePicture')
+        .populate('shares.userId', 'username email profilePicture')
         .exec();
 
       return transformations;
@@ -161,6 +167,9 @@ export class TransformationService {
       const transformations = await this.transformationModel
         .find()
         .lean()
+        .populate('userId', 'username email profilePicture')
+        .populate('likes.userId', 'username email profilePicture')
+        .populate('shares.userId', 'username email profilePicture')
         .exec();
 
       return transformations;
@@ -169,6 +178,150 @@ export class TransformationService {
         throw new Error(`getAllTransformations error: ${error.message}`);
       } else {
         throw new Error(`getAllTransformations error: ${String(error)}`);
+      }
+    }
+  }
+
+
+  async getTransformationByFilter(filter: Record<string, any>): Promise<ITransformationDocument[]> {
+    try {
+      const processedFilter = Object.entries(filter).reduce(
+        (acc, [key, value]) => {
+          if (value === 'true') {
+            acc[key] = true;
+          } else if (value === 'false') {
+            acc[key] = false;
+          } else {
+            acc[key] = value;
+          }
+          return acc;
+        },
+        {} as Record<string, any>,
+      );
+
+      const transformations = await this.transformationModel
+        .find(processedFilter)
+        .lean()
+        .populate('userId', 'username email profilePicture')
+        .populate('likes.userId', 'username email profilePicture')
+        .populate('shares.userId', 'username email profilePicture')
+        .exec();
+
+      return transformations;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(`getTransformationByFilter error: ${error.message}`);
+      } else {
+        throw new Error(`getTransformationByFilter error: ${String(error)}`);
+      }
+    }
+  }
+
+  async getTransformationByText(text: string): Promise<ITransformationDocument[]> {
+    try {
+      const transformations = await this.transformationModel
+        .find({
+          $or: [
+            { title: { $regex: text, $options: 'i' } },
+            { prompt: { $regex: text, $options: 'i' } },
+            { tags: { $regex: text, $options: 'i' } },
+          ],
+        })
+        .lean()
+        .populate('userId', 'username email profilePicture')
+        .populate('likes.userId', 'username email profilePicture')
+        .populate('shares.userId', 'username email profilePicture')
+        .exec();
+
+      return transformations;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(`getTransformationByText error: ${error.message}`);
+      } else {
+        throw new Error(`getTransformationByText error: ${String(error)}`);
+      }
+    }
+  };
+
+  async getUserLikedTransformations(userId: string)
+    : Promise<ITransformationDocument[]> {
+    try {
+      const transformations = await this.transformationModel
+        .find({ 'likes.userId': userId })
+        .populate('userId', 'username email profilePicture')
+        .populate('likes.userId', 'username email profilePicture')
+        .lean()
+        .exec();
+
+      return transformations as ITransformationDocument[];
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(`getUserLikedTransformations error: ${error.message}`);
+      } else {
+        throw new Error(`getUserLikedTransformations error: ${String(error)}`);
+      }
+    }
+  }
+
+
+  async likeTransformation(likeData: ILikeTransformationPayload): Promise<ITransformationDocument> {
+    try {
+      const transformation = await this.transformationModel.findById(likeData.transformationId);
+      if (!transformation) {
+        throw new NotFoundException('Transformation not found');
+      }
+
+      if (!transformation.likes) {
+        transformation.likes = [];
+      }
+      const existingLike = transformation.likes.find((like) => like.userId.toString() === likeData.userId);
+      if (existingLike) {
+        transformation.likes = transformation.likes.filter((like) => like.userId.toString() !== likeData.userId);
+      } else {
+        transformation.likes.push({
+          userId: likeData.userId,
+          transformationId: likeData.transformationId,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      }
+
+      await transformation.save();
+
+      return transformation.toObject() as ITransformationDocument;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(`likeTransformation error: ${error.message}`);
+      } else {
+        throw new Error(`likeTransformation error: ${String(error)}`);
+      }
+    }
+  }
+
+  async shareTransformation(shareData: IShareTransformationPayload): Promise<ITransformationDocument> {
+    try {
+      const transformation = await this.transformationModel.findById(shareData.transformationId);
+      if (!transformation) {
+        throw new NotFoundException('Transformation not found');
+      }
+
+      if (!transformation.shares) {
+        transformation.shares = [];
+      }
+      transformation.shares.push({
+        userId: shareData.userId,
+        transformationId: shareData.transformationId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      await transformation.save();
+
+      return transformation.toObject() as ITransformationDocument;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(`shareTransformation error: ${error.message}`);
+      } else {
+        throw new Error(`shareTransformation error: ${String(error)}`);
       }
     }
   }
