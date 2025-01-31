@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   BadRequestException,
+  forwardRef,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -22,9 +24,9 @@ export class TransformationService {
   constructor(
     @InjectModel(TranformationImage.name)
     private transformationModel: Model<TranformationImage>,
+    @Inject(forwardRef(() => UsersService))
     private usersService: UsersService,
-    private cloudinaryService: CloudinaryService,
-  ) { }
+    private cloudinaryService: CloudinaryService,) { }
 
   async createOneImageTransformation(data: ITransformationDto) {
     try {
@@ -94,8 +96,12 @@ export class TransformationService {
     userId: string,
   ): Promise<ITransformationDocument[]> {
     try {
+
+
       const transformations = await this.transformationModel
-        .find()
+        .find(
+          { userId: userId },
+        )
         .lean()
         .exec();
 
@@ -103,9 +109,8 @@ export class TransformationService {
         throw new NotFoundException('No transformations found for this user');
       }
 
-      return transformations.filter(
-        (transformation) => transformation.userId?.toString() === userId,
-      );
+      return transformations;
+
     } catch (error) {
       if (error instanceof Error) {
         throw new Error(`getTransformationsByUserId error: ${error.message}`);
@@ -276,6 +281,7 @@ export class TransformationService {
       }
       const existingLike = transformation.likes.find((like) => like.userId.toString() === likeData.userId);
       if (existingLike) {
+        // unlike
         transformation.likes = transformation.likes.filter((like) => like.userId.toString() !== likeData.userId);
       } else {
         transformation.likes.push({

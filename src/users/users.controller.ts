@@ -10,9 +10,9 @@ import {
     UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { Roles, RolesGuard } from 'src/auth/guards/role.guard';
+// import { RolesGuard } from 'src/auth/guards/role.guard';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
-import { Role } from '@auth/interfaces/transformation.interface';
+// import { Role } from '@auth/interfaces/transformation.interface';
 
 import { UsersService } from './users.service';
 
@@ -21,8 +21,8 @@ import { UsersService } from './users.service';
 export class UsersController {
     constructor(private readonly usersService: UsersService) { }
 
-    @UseGuards(AuthGuard, RolesGuard)
-    @Roles(Role.Admin)
+    @UseGuards(AuthGuard)
+    // @Roles(Role.Admin)
     @Get('id/:id')
     @ApiOperation({ summary: 'Get user by ID' })
     @ApiResponse({ status: 200, description: 'User found' })
@@ -41,8 +41,8 @@ export class UsersController {
         }
     }
 
-    @UseGuards(AuthGuard, RolesGuard)
-    @Roles(Role.Admin)
+    @UseGuards(AuthGuard)
+    // @Roles(Role.Admin)
     @Get('username/:username')
     @ApiOperation({ summary: 'Get user by username' })
     @ApiResponse({ status: 200, description: 'User found' })
@@ -64,8 +64,8 @@ export class UsersController {
         }
     }
 
-    @UseGuards(AuthGuard, RolesGuard)
-    @Roles(Role.Admin)
+    @UseGuards(AuthGuard)
+    // @Roles(Role.Admin)
     @Get('token/:token')
     @ApiOperation({ summary: 'Get user by verification token' })
     @ApiResponse({ status: 200, description: 'User found' })
@@ -87,8 +87,8 @@ export class UsersController {
         }
     }
 
-    @UseGuards(AuthGuard, RolesGuard)
-    @Roles(Role.Admin)
+    @UseGuards(AuthGuard)
+    // @Roles(Role.Admin)
     @Get('email')
     @ApiOperation({ summary: 'Get user by email' })
     @ApiResponse({ status: 200, description: 'User found' })

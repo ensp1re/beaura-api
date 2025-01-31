@@ -1,25 +1,27 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { hash } from 'argon2';
 import { IAuthDocument, IUpdatePasswordPayload, IVerifyEmailPayload } from '@auth/interfaces/transformation.interface';
+import { TransformationService } from '@auth/transformation/transformation.service';
 
 import { User } from './models.schema.ts/users.schema';
 
 @Injectable()
 export class UsersService {
-    constructor(@InjectModel(User.name) private userModel: Model<User>) { }
+    constructor(
+        @InjectModel(User.name) private userModel: Model<User>,
+        @Inject(forwardRef(() => TransformationService))
+        private transformationService: TransformationService) { }
 
     async createUser(data: IAuthDocument): Promise<IAuthDocument> {
         try {
             const hashedPassword = await hash(data.password!);
             const user = new this.userModel({ ...data, password: hashedPassword });
 
-            // Save the user and then retrieve the plain object using `.lean()`
             const savedUser = await user.save();
 
-            // Query for the user with `lean()` to get only the content
             const userData = await this.userModel
                 .findById(savedUser._id)
                 .lean<IAuthDocument>();
@@ -41,6 +43,14 @@ export class UsersService {
             const user = await this.userModel.findOne({ username }).lean<IAuthDocument>().exec();
             if (!user) {
                 throw new NotFoundException('User not found');
+            }
+
+            const transformations = await this.transformationService.getTransformationsByUserId(user._id);
+
+            if (transformations) {
+                user.transformations = transformations;
+            } else {
+                user.transformations = [];
             }
 
             return user as IAuthDocument;
@@ -80,11 +90,22 @@ export class UsersService {
         email: string,
     ): Promise<IAuthDocument> {
         try {
-
             const user = await this.userModel
                 .findOne({ $or: [{ username }, { email }] })
-                .lean()
+                .lean<IAuthDocument>()
                 .exec();
+
+            if (!user) {
+                throw new NotFoundException('User not found');
+            }
+
+            const transformations = await this.transformationService.getTransformationsByUserId(user._id);
+
+            if (transformations) {
+                user.transformations = transformations;
+            } else {
+                user.transformations = [];
+            }
 
             return user as IAuthDocument;
         } catch (error) {

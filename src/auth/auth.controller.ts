@@ -113,7 +113,6 @@ export class AuthController {
         const result = this.authService.removeRefreshTokenFromResponse(res);
         return result;
     }
-    // change logics in refresh-token
 
     @UsePipes(new ValidationPipe())
     @HttpCode(StatusCodes.OK)

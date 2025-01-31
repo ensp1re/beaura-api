@@ -56,7 +56,7 @@ export class TransformationController {
         }
     }
 
-    // @UseGuards(AuthGuard)
+    @UseGuards(AuthGuard)
     @HttpCode(200)
     @Get('id/:userId')
     @ApiOperation({ summary: 'Get transformations by user ID' })
@@ -66,7 +66,6 @@ export class TransformationController {
         @Param('userId') userId: string,
     ): Promise<ITransformationDocument[]> {
         try {
-            console.log(userId);
             const transformations =
                 await this.transformationService.getTransformationsByUserId(userId);
             return transformations;
@@ -81,7 +80,7 @@ export class TransformationController {
     }
 
 
-    // @UseGuards(AuthGuard)
+    @UseGuards(AuthGuard)
     @Get(':id')
     @ApiOperation({ summary: 'Get transformation by ID' })
     @ApiResponse({ status: 200, description: 'Transformation retrieved successfully.' })
@@ -108,7 +107,7 @@ export class TransformationController {
             throw new BadRequestException('An unknown error occurred');
         }
     }
-    // @UseGuards(AuthGuard)
+    @UseGuards(AuthGuard)
     @HttpCode(200)
     @Get('liked/:userId')
     @ApiOperation({ summary: 'Get liked transformations by user ID' })
@@ -131,7 +130,7 @@ export class TransformationController {
         }
     }
 
-    // @UseGuards(AuthGuard)
+    @UseGuards(AuthGuard)
     @Get('filter/search')
     @ApiOperation({ summary: 'Get transformations by filter' })
     @ApiResponse({ status: 200, description: 'Transformations retrieved successfully.' })
@@ -155,7 +154,7 @@ export class TransformationController {
     }
 
 
-    // @UseGuards(AuthGuard)
+    @UseGuards(AuthGuard)
     @HttpCode(200)
     @Get('search/text')
     @ApiOperation({ summary: 'Get transformations by text search' })
@@ -177,9 +176,9 @@ export class TransformationController {
     }
 
 
-    // @UseGuards(AuthGuard)
+    @UseGuards(AuthGuard)
     @HttpCode(200)
-    @Put('like')
+    @Put('')
     @ApiOperation({ summary: 'Like a transformation' })
     @ApiResponse({ status: 200, description: 'Transformation liked successfully.' })
     @ApiResponse({ status: 400, description: 'Bad Request.' })
@@ -194,7 +193,7 @@ export class TransformationController {
         }
     }
 
-    // @UseGuards(AuthGuard)
+    @UseGuards(AuthGuard)
     @HttpCode(200)
     @Put('share')
     @ApiOperation({ summary: 'Share a transformation' })
