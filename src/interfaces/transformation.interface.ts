@@ -1,4 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { ITicket } from '@auth/ticket/interfaces/ticket.interface';
+
 import { ITransformationDocument } from './main.interface';
 
 declare global {
@@ -45,8 +47,10 @@ export interface IAuthDocument {
   emailVerificationToken?: string;
   creditBalance?: number;
   status?: string; // free, starter, premium
+  isNotificationEnabled?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
+  tickets?: ITicket[]; // will add type for this later
   passwordResetToken?: string;
   passwordResetTokenExpires?: Date;
   transformations?: ITransformationDocument[] | []; // will add type for this later
@@ -104,5 +108,5 @@ export interface IIssueTokensResponse {
 export enum Role {
   User = 'User',
   Admin = 'Admin',
-  Moderator = 'Moderator',
+  Moderator = 'Moderator'
 }

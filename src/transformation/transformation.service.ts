@@ -1,32 +1,33 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import {
-  BadRequestException,
-  forwardRef,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, forwardRef, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { UploadApiResponse } from 'cloudinary';
 import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 import { UsersService } from 'src/users/users.service';
 import { v4 as uuidv4 } from 'uuid';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
-import { ICreateTransformationPayload, IGenerativeReplace, ILikeTransformationPayload, IShareTransformationPayload, ITransformationDocument, ITransformationDto } from '@auth/interfaces/main.interface';
+import {
+  ICreateTransformationPayload,
+  IGenerativeReplace,
+  ILikeTransformationPayload,
+  IShareTransformationPayload,
+  ITransformationDocument,
+  ITransformationDto
+} from '@auth/interfaces/main.interface';
 import { createUrl } from '@auth/lib/utils';
 
 import { TranformationImage } from './models/transformation.schema';
 
 @Injectable()
 export class TransformationService {
-  private ITEM_RO_REPLACE: string =
-    'haircut';
+  private ITEM_RO_REPLACE: string = 'haircut';
   constructor(
     @InjectModel(TranformationImage.name)
     private transformationModel: Model<TranformationImage>,
     @Inject(forwardRef(() => UsersService))
     private usersService: UsersService,
-    private cloudinaryService: CloudinaryService,) { }
+    private cloudinaryService: CloudinaryService
+  ) {}
 
   async createOneImageTransformation(data: ITransformationDto) {
     try {
@@ -37,11 +38,10 @@ export class TransformationService {
 
       const transformationPublicIdFromImage: string = uuidv4();
 
-      const uploadResultFromImage: UploadApiResponse | undefined =
-        (await this.cloudinaryService.uploadImage(
-          data.selectedImage!,
-          transformationPublicIdFromImage,
-        )) as UploadApiResponse;
+      const uploadResultFromImage: UploadApiResponse | undefined = (await this.cloudinaryService.uploadImage(
+        data.selectedImage!,
+        transformationPublicIdFromImage
+      )) as UploadApiResponse;
 
       if (!uploadResultFromImage.public_id) {
         throw new NotFoundException('Image not uploaded');
@@ -49,19 +49,13 @@ export class TransformationService {
 
       const transformationPublicIdToImage: string = uuidv4();
       const generativeReplaceData: IGenerativeReplace = {
-        public_url: createUrl(
-          this.ITEM_RO_REPLACE,
-          data.prompt,
-          uploadResultFromImage.public_id,
-          uploadResultFromImage.format,
-        ),
-        public_id: transformationPublicIdToImage,
+        public_url: createUrl(this.ITEM_RO_REPLACE, data.prompt, uploadResultFromImage.public_id, uploadResultFromImage.format),
+        public_id: transformationPublicIdToImage
       };
 
-      const uploadToImage: UploadApiResponse | undefined =
-        (await this.cloudinaryService.generativeReplace(
-          generativeReplaceData,
-        )) as UploadApiResponse;
+      const uploadToImage: UploadApiResponse | undefined = (await this.cloudinaryService.generativeReplace(
+        generativeReplaceData
+      )) as UploadApiResponse;
 
       if (!uploadToImage.public_id) {
         throw new BadRequestException('uploadToImage error');
@@ -76,7 +70,7 @@ export class TransformationService {
         prompt: data.prompt,
         tags: data.tags,
         // aspectRatio: data.aspectRatio,
-        isQuality: data.isQuality,
+        isQuality: data.isQuality
       };
 
       const transformation = new this.transformationModel(transformationData);
@@ -92,25 +86,15 @@ export class TransformationService {
     }
   }
 
-  async getTransformationsByUserId(
-    userId: string,
-  ): Promise<ITransformationDocument[]> {
+  async getTransformationsByUserId(userId: string): Promise<ITransformationDocument[]> {
     try {
-
-
-      const transformations = await this.transformationModel
-        .find(
-          { userId: userId },
-        )
-        .lean()
-        .exec();
+      const transformations = await this.transformationModel.find({ userId: userId }).lean().exec();
 
       if (!transformations || transformations.length === 0) {
         throw new NotFoundException('No transformations found for this user');
       }
 
       return transformations;
-
     } catch (error) {
       if (error instanceof Error) {
         throw new Error(`getTransformationsByUserId error: ${error.message}`);
@@ -120,16 +104,15 @@ export class TransformationService {
     }
   }
 
-  async getTransformationById(
-    transformationId: string,
-  ): Promise<ITransformationDocument> {
+  async getTransformationById(transformationId: string): Promise<ITransformationDocument> {
     try {
       const transformation = await this.transformationModel
         .findById(transformationId)
         .lean()
         .populate('userId', 'username email profilePicture')
         .populate('likes.userId', 'username email profilePicture')
-        .populate('shares.userId', 'username email profilePicture').exec();
+        .populate('shares.userId', 'username email profilePicture')
+        .exec();
 
       if (!transformation) {
         throw new NotFoundException('Transformation not found');
@@ -145,9 +128,7 @@ export class TransformationService {
     }
   }
 
-  async getTransformationsByType(
-    type: string,
-  ): Promise<ITransformationDocument[]> {
+  async getTransformationsByType(type: string): Promise<ITransformationDocument[]> {
     try {
       const transformations = await this.transformationModel
         .find({ transformationType: type })
@@ -187,7 +168,6 @@ export class TransformationService {
     }
   }
 
-
   async getTransformationByFilter(filter: Record<string, any>): Promise<ITransformationDocument[]> {
     try {
       const processedFilter = Object.entries(filter).reduce(
@@ -201,7 +181,7 @@ export class TransformationService {
           }
           return acc;
         },
-        {} as Record<string, any>,
+        {} as Record<string, any>
       );
 
       const transformations = await this.transformationModel
@@ -229,8 +209,8 @@ export class TransformationService {
           $or: [
             { title: { $regex: text, $options: 'i' } },
             { prompt: { $regex: text, $options: 'i' } },
-            { tags: { $regex: text, $options: 'i' } },
-          ],
+            { tags: { $regex: text, $options: 'i' } }
+          ]
         })
         .lean()
         .populate('userId', 'username email profilePicture')
@@ -246,10 +226,9 @@ export class TransformationService {
         throw new Error(`getTransformationByText error: ${String(error)}`);
       }
     }
-  };
+  }
 
-  async getUserLikedTransformations(userId: string)
-    : Promise<ITransformationDocument[]> {
+  async getUserLikedTransformations(userId: string): Promise<ITransformationDocument[]> {
     try {
       const transformations = await this.transformationModel
         .find({ 'likes.userId': userId })
@@ -267,7 +246,6 @@ export class TransformationService {
       }
     }
   }
-
 
   async likeTransformation(likeData: ILikeTransformationPayload): Promise<ITransformationDocument> {
     try {
@@ -288,7 +266,7 @@ export class TransformationService {
           userId: likeData.userId,
           transformationId: likeData.transformationId,
           createdAt: new Date(),
-          updatedAt: new Date(),
+          updatedAt: new Date()
         });
       }
 
@@ -300,6 +278,30 @@ export class TransformationService {
         throw new Error(`likeTransformation error: ${error.message}`);
       } else {
         throw new Error(`likeTransformation error: ${String(error)}`);
+      }
+    }
+  }
+
+  async dislikeTransformation(likeData: ILikeTransformationPayload): Promise<ITransformationDocument> {
+    try {
+      const transformation = await this.transformationModel.findById(likeData.transformationId);
+      if (!transformation) {
+        throw new NotFoundException('Transformation not found');
+      }
+
+      if (!transformation.likes) {
+        transformation.likes = [];
+      }
+      transformation.likes = transformation.likes.filter((like) => like.userId.toString() !== likeData.userId);
+
+      await transformation.save();
+
+      return transformation.toObject() as ITransformationDocument;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(`dislikeTransformation error: ${error.message}`);
+      } else {
+        throw new Error(`dislikeTransformation error: ${String(error)}`);
       }
     }
   }
@@ -318,7 +320,7 @@ export class TransformationService {
         userId: shareData.userId,
         transformationId: shareData.transformationId,
         createdAt: new Date(),
-        updatedAt: new Date(),
+        updatedAt: new Date()
       });
       await transformation.save();
 
@@ -328,6 +330,25 @@ export class TransformationService {
         throw new Error(`shareTransformation error: ${error.message}`);
       } else {
         throw new Error(`shareTransformation error: ${String(error)}`);
+      }
+    }
+  }
+
+  async deleteTransformationById(transformationId: string): Promise<{
+    message: string;
+  }> {
+    try {
+      const transformation = await this.transformationModel.findByIdAndDelete(transformationId);
+      if (!transformation) {
+        throw new NotFoundException('Transformation not found');
+      }
+
+      return { message: 'Transformation deleted successfully' };
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(`deleteTransformationById error: ${error.message}`);
+      } else {
+        throw new Error(`deleteTransformationById error: ${String(error)}`);
       }
     }
   }

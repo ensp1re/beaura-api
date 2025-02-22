@@ -4,13 +4,13 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 import { UsersModule } from '@auth/users/users.module';
+import { MailModule } from '@auth/mail/mail.module';
 
 import { AuthGuard } from './guards/auth.guard';
 import { RolesGuard } from './guards/role.guard';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
-import { MailModule } from '@auth/mail/mail.module';
 
 @Module({
   imports: [
@@ -22,12 +22,12 @@ import { MailModule } from '@auth/mail/mail.module';
       useFactory: async (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET'),
         signOptions: { expiresIn: '7d' }
-      }),
+      })
     }),
-    forwardRef(() => MailModule),
+    forwardRef(() => MailModule)
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, CloudinaryService, AuthGuard, RolesGuard],
-  exports: [AuthService, JwtModule, AuthGuard, RolesGuard],
+  exports: [AuthService, JwtModule, AuthGuard, RolesGuard]
 })
-export class AuthModule { }
+export class AuthModule {}
