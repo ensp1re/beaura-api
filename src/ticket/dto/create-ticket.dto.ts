@@ -1,5 +1,4 @@
-import { IsMongoId, IsNotEmpty, IsString, MinLength } from 'class-validator';
-import { Types } from 'mongoose';
+import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 import { ICreateTicketDto } from '../interfaces/ticket.interface';
@@ -10,9 +9,9 @@ export class CreateTicketDto implements ICreateTicketDto {
     type: String,
     example: '60d0fe4f5311236168a109ca'
   })
-  @IsMongoId()
+  @IsEmail()
   @IsNotEmpty()
-  userId: Types.ObjectId | undefined;
+  email: string | undefined;
 
   @ApiProperty({
     description: 'The subject of the ticket',

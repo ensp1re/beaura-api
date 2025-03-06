@@ -15,7 +15,7 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
-    logger: new FileLogger(),
+    logger: new FileLogger()
   });
 
   console.log(`App is running in ${process.env.NODE_ENV} mode`);
@@ -27,16 +27,18 @@ async function bootstrap() {
 
   app.use(cookieParser());
 
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-    forbidNonWhitelisted: true,
-    transform: true,
-  }));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true
+    })
+  );
 
   const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 100,
-    message: 'Too many requests from this IP, please try again after 15 minutes',
+    message: 'Too many requests from this IP, please try again after 15 minutes'
   });
 
   app.use((req: Request, res: Response, next: NextFunction) => {
@@ -47,10 +49,7 @@ async function bootstrap() {
         res.setHeader('X-Content-Type-Options', 'nosniff');
         res.setHeader('X-Frame-Options', 'DENY');
         res.setHeader('X-XSS-Protection', '1; mode=block');
-        res.setHeader(
-          'Strict-Transport-Security',
-          'max-age=31536000; includeSubDomains',
-        );
+        res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
         res.setHeader('Content-Security-Policy', 'default-src \'self\'');
 
         next();
@@ -58,12 +57,17 @@ async function bootstrap() {
     });
   });
 
+  app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
+
+  
   app.use(compression());
   app.use(express.json({ limit: '10mb' }));
-  app.use(express.urlencoded({
-    extended
-      : true, limit: '10mb'
-  }));
+  app.use(
+    express.urlencoded({
+      extended: true,
+      limit: '10mb'
+    })
+  );
   app.use(helmet());
 
   app.use(
@@ -72,7 +76,7 @@ async function bootstrap() {
       keys: [`${process.env.SECRET_KEY_ONE}`, `${process.env.SECRET_KEY_TWO}`],
       maxAge: 24 * 60 * 60 * 1000,
       secure: process.env.NODE_ENV === 'production',
-      ...(process.env.NODE_ENV === 'production' && { sameSite: 'none' }),
+      ...(process.env.NODE_ENV === 'production' && { sameSite: 'none' })
     })
   );
 
@@ -85,14 +89,14 @@ async function bootstrap() {
     next();
   });
 
-  
   app.enableCors({
     origin: process.env.BASE_URL || 'http://localhost:3000',
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    credentials: true,
+    credentials: true
   });
 
-  const configSwagger = new DocumentBuilder().setTitle('Api for Beaura AI')
+  const configSwagger = new DocumentBuilder()
+    .setTitle('Api for Beaura AI')
     .setDescription('This is the API for Beaura AI')
     .setVersion('1.0')
     .addTag('beaura')
@@ -107,7 +111,7 @@ async function bootstrap() {
 
   const customOptions: SwaggerCustomOptions = {
     swaggerOptions: {
-      withCredentials: true,
+      withCredentials: true
     }
   };
 
@@ -116,6 +120,5 @@ async function bootstrap() {
 
   await app.listen(process.env.PORT ?? 3000);
   fileLogger.log(`Application is running on: ${await app.getUrl()}`, 'Main.ts');
-
 }
 bootstrap();

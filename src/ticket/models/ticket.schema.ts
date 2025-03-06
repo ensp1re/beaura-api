@@ -11,7 +11,7 @@ export type TicketDocument = Ticket &
 
 @Schema({ _id: false })
 class Message {
-  @Prop({ type: Types.ObjectId, required: true })
+  @Prop({ type: Types.ObjectId, required: true, ref: 'User' })
   userId: Types.ObjectId | undefined;
 
   @Prop({ type: String, required: true })

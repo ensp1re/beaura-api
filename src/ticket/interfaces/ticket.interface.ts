@@ -29,7 +29,8 @@ export interface ITicketDetails extends ITicket {
 }
 
 export interface ICreateTicketDto {
-  userId: Types.ObjectId | undefined;
+  email: string | undefined;
+  userId?: Types.ObjectId | undefined;
   subject: string | undefined;
   content: string | undefined;
 }

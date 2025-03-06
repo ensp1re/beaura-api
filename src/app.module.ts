@@ -13,6 +13,7 @@ import { AppMiddleware } from './app.middleware';
 import { configureCloudinary } from './config/cloudinary.config';
 import { MailModule } from './mail/mail.module';
 import { TicketModule } from './ticket/ticket.module';
+import { PaymentsModule } from './payments/payments.module';
 
 @Module({
   imports: [
@@ -27,7 +28,8 @@ import { TicketModule } from './ticket/ticket.module';
     }),
     MongooseModule.forRoot(process.env.MONGO_URI!),
     MailModule,
-    TicketModule
+    TicketModule,
+    PaymentsModule
   ],
   providers: [
     { provide: FileLogger, useClass: FileLogger },

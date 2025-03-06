@@ -8,6 +8,8 @@ import { AuthGuard } from 'src/auth/guards/auth.guard';
 
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/users.dto';
+import { Roles } from '@auth/auth/guards/role.guard';
+import { Role } from '@auth/interfaces/transformation.interface';
 
 @ApiTags('users')
 @Controller('users')
@@ -110,6 +112,25 @@ export class UsersController {
       return data;
     } catch (error) {
       throw new BadGatewayException(`updateUserById: ${(error as any).message}`);
+    }
+  }
+
+  @UseGuards(AuthGuard)
+  @Roles(Role.Admin)
+  @Get('all')
+  @ApiOperation({ summary: 'Get all users' })
+  @ApiResponse({ status: 200, description: 'Users found' })
+  @ApiResponse({ status: 404, description: 'Users not found' })
+  @ApiResponse({ status: 502, description: 'Bad Gateway' })
+  async getAllUsers() {
+    try {
+      const users = await this.usersService.getAllUsers();
+      if (!users) {
+        throw new NotFoundException('Users not found');
+      }
+      return users.map(({ password, ...data }) => data);
+    } catch (error) {
+      throw new BadGatewayException(`getAllUsers: ${(error as any).message}`);
     }
   }
 }

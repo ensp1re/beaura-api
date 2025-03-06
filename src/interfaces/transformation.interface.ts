@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { ITicket } from '@auth/ticket/interfaces/ticket.interface';
 
-import { ITransformationDocument } from './main.interface';
+import { ISubscription, ITransaction, ITransformationDocument } from './main.interface';
 
 declare global {
   namespace Express {
@@ -55,6 +55,9 @@ export interface IAuthDocument {
   passwordResetTokenExpires?: Date;
   transformations?: ITransformationDocument[] | []; // will add type for this later
   role?: Role;
+  transactions?: ITransaction[];
+  subscriptions?: ISubscription[];
+  stripeCustomerId?: string | undefined;
 }
 
 export interface IAuthResponse {

@@ -80,6 +80,37 @@ export class UsersService {
       throw error;
     }
   }
+
+  async findBystripeCustomerId(stripeCustomerId: string): Promise<IAuthDocument> {
+    try {
+      const user = await this.userModel.findOne({ stripeCustomerId }).lean<IAuthDocument>().exec();
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+      return user;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(`findBystripeCustomerId error: ${error.message}`);
+      }
+      throw error;
+    }
+  }
+
+  async findByEmail(email: string): Promise<IAuthDocument> {
+    try {
+      const user = await this.userModel.findOne({ email }).lean<IAuthDocument>().exec();
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+      return user;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(`findByEmail error: ${error.message}`);
+      }
+      throw error;
+    }
+  }
+
   async findById(userId: string): Promise<IAuthDocument> {
     try {
       const user = await this.userModel.findById(userId).lean<IAuthDocument>().exec();
@@ -308,6 +339,60 @@ export class UsersService {
     } catch (error) {
       if (error instanceof Error) {
         throw new Error(`deleteAccount error: ${error.message}`);
+      }
+      throw error;
+    }
+  }
+
+  async updateCreditBalance(userId: string, creditBalance: number): Promise<void> {
+    try {
+      await this.userModel.updateOne({ _id: userId }, { creditBalance });
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(`updateCreditBalance error: ${error.message}`);
+      }
+      throw error;
+    }
+  }
+
+  async updateSubscription(userId: string, subscriptionData: Partial<User>): Promise<void> {
+    try {
+      await this.userModel.updateOne({ _id: userId }, { ...subscriptionData });
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(`updateSubscription error: ${error.message}`);
+      }
+      throw error;
+    }
+  }
+
+  async getSubscriptionDetails(userId: string): Promise<Partial<User>> {
+    try {
+      const user = await this.userModel.findById(userId).lean<IAuthDocument>().exec();
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+      return {
+        status: user.status,
+        creditBalance: user.creditBalance,
+        subscriptions: user.subscriptions,
+        transactions: user.transactions
+      };
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(`getSubscriptionDetails error: ${error.message}`);
+      }
+      throw error;
+    }
+  }
+
+  async getAllUsers(): Promise<IAuthDocument[]> {
+    try {
+      const users = await this.userModel.find().lean<IAuthDocument[]>().exec();
+      return users;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(`getAllUsers error: ${error.message}`);
       }
       throw error;
     }

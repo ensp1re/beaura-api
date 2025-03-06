@@ -2,9 +2,9 @@ import { forwardRef, Inject, Injectable, InternalServerErrorException, NotFoundE
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { UsersService } from '@auth/users/users.service';
-import { IAuthDocument } from '@auth/interfaces/transformation.interface';
+import { MailService } from '@auth/mail/mail.service';
 
-import { Ticket, TicketDocument } from './models/ticket.schema';
+import { Ticket } from './models/ticket.schema';
 import {
   ICreateMessageDto,
   ICreateTicketDto,
@@ -20,12 +20,14 @@ export class TicketsService {
   constructor(
     @Inject(forwardRef(() => UsersService))
     private usersService: UsersService,
+    @Inject(forwardRef(() => MailService))
+    private mailService: MailService,
     @InjectModel(Ticket.name)
     private ticketModel: Model<Ticket>
   ) {}
 
   async createTicket(dto: ICreateTicketDto): Promise<ITicket> {
-    const user = await this.usersService.findById(dto.userId as unknown as string);
+    const user = await this.usersService.findByEmail(dto.email as unknown as string);
 
     if (!user) {
       throw new NotFoundException(`User with ID ${dto.userId} not found`);
@@ -47,7 +49,26 @@ export class TicketsService {
 
     try {
       const savedTicket = await ticket.save();
-      return this.mapToTicketInterface(savedTicket as unknown as TicketDocument);
+
+      const emailData = {
+        email: user.email,
+        title: 'New Ticket Created',
+        notificationTitle: 'New Ticket Created',
+        notificationContent: `Your ticket with the subject "${dto.subject}" has been successfully created.`
+      };
+
+      const response = await this.mailService.sendGeneralNotificationEmail(
+        emailData.email!,
+        emailData.title,
+        emailData.notificationTitle,
+        emailData.notificationContent
+      );
+
+      if (!response.success) {
+        throw new InternalServerErrorException('Failed to send email notification');
+      }
+
+      return savedTicket as unknown as ITicket;
     } catch (error) {
       console.error('Error saving ticket:', error);
       throw new InternalServerErrorException('Failed to create ticket');
@@ -57,8 +78,27 @@ export class TicketsService {
   async getTickets(status?: TicketStatus): Promise<ITicket[]> {
     try {
       const query = status ? { status } : {};
-      const tickets = await this.ticketModel.find(query).sort('-updatedAt').populate('userId');
-      return tickets.map((ticket) => this.mapToTicketInterface(ticket as unknown as TicketDocument));
+      const tickets = await this.ticketModel.find(query).sort('-updatedAt').populate('userId', 'username email profilePicture').exec();
+
+      for (const ticket of tickets) {
+        if (!ticket.messages) {
+          ticket.messages = [];
+        }
+        ticket.messages = await Promise.all(
+          ticket.messages.map(async (message) => {
+            const user = await this.usersService.findById(message.userId as unknown as string);
+            return {
+              ...message,
+              userId: user._id,
+              username: user.username,
+              email: user.email,
+              profilePicture: user.profilePicture
+            };
+          })
+        );
+      }
+
+      return tickets as unknown as ITicket[];
     } catch (error) {
       console.error('Error fetching tickets:', error);
       throw new InternalServerErrorException('Failed to get tickets');
@@ -67,11 +107,12 @@ export class TicketsService {
 
   async getTicketById(id: Types.ObjectId): Promise<ITicket> {
     try {
-      const ticket = await this.ticketModel.findById(id).populate('user');
+      const ticket = await this.ticketModel.findById(id).lean().populate('userId', 'username email profilePicture').exec();
       if (!ticket) {
         throw new NotFoundException(`Ticket with ID ${id} not found`);
       }
-      return this.mapToTicketInterface(ticket as unknown as TicketDocument);
+
+      return ticket as unknown as ITicket;
     } catch (error) {
       console.error(`Error fetching ticket with ID ${id}:`, error);
       throw new InternalServerErrorException('Failed to fetch ticket');
@@ -91,13 +132,13 @@ export class TicketsService {
   }
   async getTicketDetails(id: Types.ObjectId): Promise<ITicketDetails> {
     try {
-      const ticket = await this.ticketModel.findById(id).populate('user');
+      const ticket = await this.ticketModel.findById(id).lean().populate('userId', 'username email profilePicture').exec();
 
       if (!ticket) {
         throw new NotFoundException(`Ticket with ID ${id} not found`);
       }
 
-      return this.mapToTicketDetailsInterface(ticket as unknown as TicketDocument);
+      return ticket as unknown as ITicketDetails;
     } catch (error) {
       console.error(`Error fetching ticket details for ID ${id}:`, error);
       throw new InternalServerErrorException('Failed to fetch ticket details');
@@ -106,13 +147,17 @@ export class TicketsService {
 
   async updateTicketStatus(id: Types.ObjectId, dto: IUpdateTicketStatusDto): Promise<ITicket> {
     try {
-      const updatedTicket = await this.ticketModel.findByIdAndUpdate(id, { status: dto.status }, { new: true }).populate('userId');
+      const updatedTicket = await this.ticketModel
+        .findByIdAndUpdate(id, { status: dto.status }, { new: true })
+        .populate('userId', 'username email profilePicture')
+        .lean()
+        .exec();
 
       if (!updatedTicket) {
         throw new NotFoundException(`Ticket with ID ${id} not found`);
       }
 
-      return this.mapToTicketInterface(updatedTicket as unknown as TicketDocument);
+      return updatedTicket as unknown as ITicket;
     } catch (error) {
       console.error(`Error updating ticket status for ID ${id}:`, error);
       throw new InternalServerErrorException('Failed to update ticket status');
@@ -143,6 +188,35 @@ export class TicketsService {
       }
       ticket.messages.push(newMessage);
 
+      const ticketUserFullInfo = await this.usersService.findById(ticket.userId as unknown as string);
+
+      if ((ticket.userId && ticket.userId.toString() !== user._id.toString()) || ticketUserFullInfo.role?.toLowerCase() === 'admin') {
+        const emailData = {
+          email: user.email,
+          title: 'New Ticket Message',
+          notificationTitle: 'New Ticket Message',
+          notificationContent: `
+            You have a new message on your ticket with the subject "${ticket.subject}" (Ticket ID: ${ticket._id}).
+            <br><br>
+            <strong>Message:</strong><br>
+            ${dto.content}
+            <br><br>
+            Please reply to this email to respond to the message.
+          `
+        };
+
+        const response = await this.mailService.sendGeneralNotificationEmail(
+          emailData.email!,
+          emailData.title,
+          emailData.notificationTitle,
+          emailData.notificationContent
+        );
+
+        if (!response.success) {
+          throw new InternalServerErrorException('Failed to send email notification');
+        }
+      }
+
       await ticket.save();
 
       return newMessage;
@@ -150,35 +224,5 @@ export class TicketsService {
       console.error(`Error adding message to ticket with ID ${ticketId}:`, error);
       throw new InternalServerErrorException('Failed to add message to ticket');
     }
-  }
-
-  private mapToTicketInterface(ticket: TicketDocument): ITicket {
-    return {
-      id: ticket._id as Types.ObjectId,
-      subject: ticket.subject || '',
-      status: ticket.status || TicketStatus.OPEN,
-      userId: ticket.userId ? ticket.userId._id : null,
-      messages:
-        (ticket.messages ?? []).map((message) => ({
-          ...message,
-          userId: message.userId as Types.ObjectId,
-          content: message.content || '',
-          createdAt: message.createdAt || new Date(),
-          updatedAt: message.updatedAt || new Date()
-        })) || [],
-      createdAt: ticket.createdAt,
-      updatedAt: ticket.updatedAt
-    };
-  }
-
-  private mapToTicketDetailsInterface(ticket: TicketDocument): ITicketDetails {
-    return {
-      ...this.mapToTicketInterface(ticket),
-      user: {
-        _id: ticket.userId ? (ticket.userId as IAuthDocument)._id : null,
-        nickname: ticket.userId ? (ticket.userId as IAuthDocument).nickname : '',
-        email: ticket.userId ? (ticket.userId as IAuthDocument).email : ''
-      }
-    };
   }
 }

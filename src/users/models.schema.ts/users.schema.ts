@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-import { ITransformationDocument } from 'src/interfaces/main.interface';
+import { ISubscription, ITransaction, ITransformationDocument } from 'src/interfaces/main.interface';
 
 @Schema()
 export class User extends Document {
@@ -67,6 +67,21 @@ export class User extends Document {
 
   @Prop({ type: String, default: 'User' })
   role: string | undefined;
+
+  @Prop({
+    type: [{ type: [Object] }],
+    default: []
+  })
+  transactions: ITransaction[] | undefined;
+
+  @Prop({
+    type: [{ type: [Object] }],
+    default: []
+  })
+  subscriptions: ISubscription[] | undefined;
+
+  @Prop({ type: String, default: '' })
+  stripeCustomerId: string | undefined;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
